@@ -30,3 +30,27 @@ jobs:
         run: |
           python -m compileall -q tools/noqq-onebot-sim
           python -m unittest discover -s tools/noqq-onebot-sim -p 'test_*.py' -v
+
+  real-astrbot-4293-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch exact official AstrBot v4.29.3
+        run: |
+          git clone --depth=1 --branch v4.29.3 https://github.com/AstrBotDevs/AstrBot.git "$RUNNER_TEMP/AstrBot-v4.29.3"
+          test "$(git -C "$RUNNER_TEMP/AstrBot-v4.29.3" rev-parse HEAD)" = "f61a7f42696da6df25dc7a249ec9b8d54ed9da18"
+      - name: Install AstrBot dependencies and simulator
+        run: |
+          python -m pip install --disable-pip-version-check -r "$RUNNER_TEMP/AstrBot-v4.29.3/requirements.txt"
+          python -m pip install --disable-pip-version-check -r tools/noqq-onebot-sim/requirements.txt
+      - name: Test real AstrBot OneBot reverse WebSocket protocol (no QQ)
+        env:
+          TESTING: '1'
+          PYTHONNOUSERSITE: '1'
+        run: |
+          PYTHONPATH="$RUNNER_TEMP/AstrBot-v4.29.3:$GITHUB_WORKSPACE/tools/noqq-onebot-sim" \
+            python tools/noqq-onebot-sim/integration_astrbot_adapter.py
