@@ -66,7 +66,11 @@ python tools/noqq-onebot-sim/simulator.py --url ws://127.0.0.1:6199/ws
 
 ```bash
 docker build -t dafeiyu-noqq -f tools/noqq-onebot-sim/Dockerfile tools/noqq-onebot-sim
-docker run --rm -it   --network dafeiyu-p1-bot-core   -e NOQQ_WS_TOKEN   dafeiyu-noqq --url ws://dafeiyu-p1-astrbot:6199/ws --allow-remote
+docker run --rm -it \
+  --network dafeiyu-p1-bot-core \
+  -e NOQQ_WS_TOKEN \
+  dafeiyu-noqq \
+  --url ws://dafeiyu-p1-astrbot:6199/ws --allow-remote
 ```
 
 上述 Docker 构建使用官方 `python:3.12-slim` 多架构基础镜像，支持 amd64 / arm64 的常规 Linux Docker 环境。请先停止原 NapCat-B/T 容器，确保只有一个模拟客户端连接这个 AstrBot 端口。
@@ -78,7 +82,7 @@ docker run --rm -it   --network dafeiyu-p1-bot-core   -e NOQQ_WS_TOKEN   dafeiyu
 ### 验收边界
 
 - **已通过**：官方 AstrBot v4.29.3 实际 `AiocqhttpAdapter` 与真实 WebSocket 之间的来回收发（不是 CQHttp Mock），以及文件服务 HTTP 字节下载的独立测试。
-- **正在独立验证**：大肥鱼插件与整个 AstrBot Core 的多轮消息和 SQLite 记忆链路；以其仓库独立 CI 结果为准，不能拿协议通过替代。
+- **已通过**：大肥鱼私有仓库中的[真实 AstrBot Core + 大肥鱼插件 + NoQQ 三轮聊天和 SQLite 记忆测试](https://github.com/Champion-of-the-Pajama-Mountain-Race/dafeiyu-by-friend/actions/runs/43220040514)（需要私有仓库访问权限查看）。测试使用 FakeProvider，但 Core/EventBus、插件和 WebSocket 发收都是真实实现。
 - **没有声称**：模拟腾讯 QQ 在线状态、QQ 多端真实投递、真实客户端播放或完整 NapCat 扩展 API 兼容。
 
 
@@ -97,7 +101,7 @@ docker run --rm -it   --network dafeiyu-p1-bot-core   -e NOQQ_WS_TOKEN   dafeiyu
 python -m unittest discover -s tools/noqq-onebot-sim -p 'test_*.py' -v
 ```
 
-该测试使用本地临时 WebSocket 服务端模拟 AstrBot 的动作请求，不需要 QQ 登录；**不等同于已完成 AstrBot Core / 大肥鱼插件整链路验收**。下一步集成到大肥鱼的隔离 AstrBot 4.29.3 Core 运行器，检查对话上下文、持久化记忆与媒体解码。
+本目录的快速单测使用临时 WebSocket 服务器；`integration_astrbot_adapter.py` 单独验证真正的 AstrBot 适配器。大肥鱼仓库另有真正的 Core/EventBus/插件三轮聊天及记忆验收（已通过）。仍未证明真实大模型质量、真实媒体播放或完整 NapCat 扩展 API 兼容。
 
 ## 约束
 
