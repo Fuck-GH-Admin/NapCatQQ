@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.jsonl
+!scenario.example.jsonl
+*.sqlite3
+local-*/
