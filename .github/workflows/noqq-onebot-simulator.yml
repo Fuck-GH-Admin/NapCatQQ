@@ -1,0 +1,32 @@
+name: NoQQ OneBot simulator
+
+on:
+  push:
+    branches:
+      - test/noqq-onebot-simulator-20261112
+    paths:
+      - 'tools/noqq-onebot-sim/**'
+      - '.github/workflows/noqq-onebot-simulator.yml'
+  pull_request:
+    paths:
+      - 'tools/noqq-onebot-sim/**'
+      - '.github/workflows/noqq-onebot-simulator.yml'
+  workflow_dispatch:
+
+jobs:
+  isolated-protocol-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install only simulator dependencies
+        run: python -m pip install -r tools/noqq-onebot-sim/requirements.txt
+      - name: Verify syntax and offline protocol contracts
+        run: |
+          python -m compileall -q tools/noqq-onebot-sim
+          python -m unittest discover -s tools/noqq-onebot-sim -p 'test_*.py' -v
