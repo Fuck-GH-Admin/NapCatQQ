@@ -1,0 +1,4 @@
+{"message":"你好，今天怎么样？"}
+{"message":"请记住：我喜欢草莓"}
+{"message":"刚才我说喜欢什么？"}
+{"message":[{"type":"text","data":{"text":"这是一个图片测试，仅为消息段兼容测试"}},{"type":"image","data":{"file":"file:///shared-fixtures/example.png","url":"http://localhost:8088/example.png"}}],"expect_reply":true}
