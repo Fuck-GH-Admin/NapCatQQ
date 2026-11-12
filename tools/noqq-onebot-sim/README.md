@@ -8,7 +8,10 @@ Python 3.12+：
 
 ```bash
 python -m pip install -r tools/noqq-onebot-sim/requirements.txt
-python tools/noqq-onebot-sim/simulator.py   --url ws://127.0.0.1:6199/ws   --script tools/noqq-onebot-sim/scenario.example.jsonl   --log ./local-noqq-evidence.jsonl
+python tools/noqq-onebot-sim/simulator.py \
+  --url ws://127.0.0.1:6199/ws \
+  --script tools/noqq-onebot-sim/scenario.example.jsonl \
+  --log ./local-noqq-evidence.jsonl
 ```
 
 不指定 `--script` 就是交互式终端：可以聊天，也可以输入 `/json [{"type":"image","data":{"file":"..."}}]` 发送 OneBot 多媒体消息段。
