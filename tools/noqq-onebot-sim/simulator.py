@@ -10,6 +10,7 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import re
 import shlex
 import sys
@@ -297,7 +298,7 @@ class OneBotSimulator:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Login-free OneBot v11 reverse WebSocket simulator")
     parser.add_argument("--url", default="ws://127.0.0.1:6199/ws", help="AstrBot reverse WS URL")
-    parser.add_argument("--token", default="", help="Optional AstrBot reverse WS bearer token")
+    parser.add_argument("--token", default=os.environ.get("NOQQ_WS_TOKEN", ""), help="AstrBot WS token (prefer NOQQ_WS_TOKEN env)")
     parser.add_argument("--bot-id", default="987654321")
     parser.add_argument("--user-id", default="123456789")
     parser.add_argument("--group-id", default="87654321")
