@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import re
+import shlex
 import sys
 import time
 from collections import defaultdict
@@ -18,6 +19,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from websockets.asyncio.client import connect
+from fixture_media import FixtureMediaServer
 
 LOG = logging.getLogger("noqq-onebot")
 ID_PATTERN = re.compile(r"^[1-9][0-9]{4,19}$")
@@ -56,6 +58,7 @@ class OneBotSimulator:
         self.inbox: dict[tuple[str, int], asyncio.Queue] = defaultdict(asyncio.Queue)
         self.websocket = None
         self.log_path: Path | None = None
+        self.media_server: FixtureMediaServer | None = None
 
     def _id(self) -> int:
         self._next_id += 1
@@ -239,7 +242,7 @@ class OneBotSimulator:
         return 1 if failures else 0
 
     async def interactive(self) -> None:
-        print("NoQQ interactive chat. Type /quit to exit, or /json <OneBot segment JSON array>.")
+        print("NoQQ chat: text, /image filename, /voice filename, /video filename, /json <OneBot array>, /quit")
         while True:
             try:
                 entry = await asyncio.to_thread(input, "> ")
@@ -249,7 +252,26 @@ class OneBotSimulator:
                 return
             if not entry.strip():
                 continue
-            payload = json.loads(entry[6:]) if entry.startswith("/json ") else entry
+            if entry.startswith(("/image ", "/voice ", "/video ")):
+                if self.media_server is None:
+                    print("Enable media with --media-dir (a directory containing synthetic media files).")
+                    continue
+                try:
+                    values = shlex.split(entry)
+                    if len(values) != 2:
+                        raise ValueError("provide exactly one fixture filename")
+                    kind = {"/image": "image", "/voice": "record", "/video": "video"}[values[0]]
+                    url = self.media_server.url(values[1])
+                    payload = [{"type": kind, "data": {"file": url, "url": url}}]
+                except (ValueError, KeyError) as exc:
+                    print(f"Media fixture rejected: {exc}")
+                    continue
+            else:
+                try:
+                    payload = json.loads(entry[6:]) if entry.startswith("/json ") else entry
+                except json.JSONDecodeError as exc:
+                    print(f"Invalid JSON segments: {exc}")
+                    continue
             await self.inject(payload)
 
     async def run(self, *, url: str, token: str, script: Path | None, timeout: float, heart_interval: float) -> int:
@@ -284,6 +306,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout", type=float, default=40.0)
     parser.add_argument("--heartbeat", type=float, default=30.0)
     parser.add_argument("--allow-remote", action="store_true", help="Permit a non-local ws:// endpoint")
+    parser.add_argument("--media-dir", type=Path, help="Directory of synthetic image/audio/video fixtures")
+    parser.add_argument("--media-bind", default="127.0.0.1", help="HTTP fixture host to bind (default: localhost)")
+    parser.add_argument("--media-host", default="127.0.0.1", help="HTTP hostname reachable from AstrBot (e.g. Docker host)")
+    parser.add_argument("--media-port", type=int, default=0, help="HTTP fixture port (0 = auto-select)")
     args = parser.parse_args(argv)
     parsed = urlparse(args.url)
     if parsed.scheme not in {"ws", "wss"} or not parsed.hostname:
@@ -297,12 +323,22 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     sim = OneBotSimulator(numeric_id(args.bot_id), numeric_id(args.user_id), group_id=numeric_id(args.group_id))
     sim.log_path = args.log
+    media_server = None
     try:
+        if args.media_dir:
+            media_server = FixtureMediaServer(args.media_dir, bind_host=args.media_bind,
+                                              port=args.media_port, public_host=args.media_host)
+            media_server.start()
+            sim.media_server = media_server
+            print(f"Serving synthetic media fixtures on port {media_server.port}; URLs use {args.media_host}")
         return asyncio.run(sim.run(url=args.url, token=args.token, script=args.script,
                                    timeout=args.timeout, heart_interval=args.heartbeat))
     except (OSError, TimeoutError, ConnectionError) as exc:
         LOG.error("connection failed: %s", exc)
         return 2
+    finally:
+        if media_server is not None:
+            media_server.stop()
 
 
 if __name__ == "__main__":
